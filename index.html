@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tetris en HTML</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #1e1e1e;
+            color: white;
+        }
+        canvas {
+            background-color: black;
+            border: 2px solid white;
+        }
+        .controls {
+            margin-top: 20px;
+        }
+        button {
+            font-size: 30px;
+            margin: 10px;
+            padding: 10px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>Tetris en HTML</h1>
+    <canvas id="gameCanvas" width="200" height="400"></canvas>
+    <div class="controls">
+        <button onclick="moveLeft()">⬅️</button>
+        <button onclick="moveDown()">⬇️</button>
+        <button onclick="moveRight()">➡️</button>
+        <button onclick="rotateBlock()">🔄</button>
+        <button onclick="resetGame()">🔁</button>
+    </div>
+
+    <script>
+        const canvas = document.getElementById("gameCanvas");
+        const ctx = canvas.getContext("2d");
+
+        const ROWS = 20;
+        const COLUMNS = 10;
+        const CELL_SIZE = 20;
+        let board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
+
+        const SHAPES = [
+            [[1, 1, 1], [0, 1, 0]], // T
+            [[1], [1], [1], [1]], // I
+            [[1, 0], [1, 0], [1, 1]], // L
+            [[1, 1], [1, 1]], // O
+            [[1, 1, 0], [0, 1, 1]], // Z
+            [[0, 1], [0, 1], [1, 1]], // Reverse L
+            [[0, 1, 1], [1, 1, 0]] // Reverse Z
+        ];
+
+        let currentBlock = getRandomShape();
+        let position = { x: 4, y: 0 };
+
+        function getRandomShape() {
+            return SHAPES[Math.floor(Math.random() * SHAPES.length)];
+        }
+
+        function drawBoard() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (let row = 0; row < ROWS; row++) {
+                for (let col = 0; col < COLUMNS; col++) {
+                    if (board[row][col] > 0) {
+                        ctx.fillStyle = "white";
+                        ctx.fillRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                        ctx.strokeRect(col * CELL_SIZE, row * CELL_SIZE, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+            drawBlock();
+        }
+
+        function drawBlock() {
+            ctx.fillStyle = "blue";
+            for (let row = 0; row < currentBlock.length; row++) {
+                for (let col = 0; col < currentBlock[row].length; col++) {
+                    if (currentBlock[row][col] > 0) {
+                        let x = (position.x + col) * CELL_SIZE;
+                        let y = (position.y + row) * CELL_SIZE;
+                        ctx.fillRect(x, y, CELL_SIZE, CELL_SIZE);
+                        ctx.strokeRect(x, y, CELL_SIZE, CELL_SIZE);
+                    }
+                }
+            }
+        }
+
+        function moveLeft() {
+            if (canMove(position.x - 1, position.y)) {
+                position.x -= 1;
+            }
+        }
+
+        function moveRight() {
+            if (canMove(position.x + 1, position.y)) {
+                position.x += 1;
+            }
+        }
+
+        function moveDown() {
+            if (canMove(position.x, position.y + 1)) {
+                position.y += 1;
+            } else {
+                mergeBlock();
+                clearLines();
+                spawnNewBlock();
+            }
+        }
+
+        function rotateBlock() {
+            let rotated = currentBlock[0].map((_, i) => currentBlock.map(row => row[i])).reverse();
+            if (canMove(position.x, position.y, rotated)) {
+                currentBlock = rotated;
+            }
+        }
+
+        function canMove(x, y, block = currentBlock) {
+            for (let row = 0; row < block.length; row++) {
+                for (let col = 0; col < block[row].length; col++) {
+                    if (block[row][col] > 0) {
+                        let newX = x + col;
+                        let newY = y + row;
+                        if (newX < 0 || newX >= COLUMNS || newY < 0 || newY >= ROWS || board[newY][newX] > 0) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function mergeBlock() {
+            for (let row = 0; row < currentBlock.length; row++) {
+                for (let col = 0; col < currentBlock[row].length; col++) {
+                    if (currentBlock[row][col] > 0) {
+                        board[position.y + row][position.x + col] = 1;
+                    }
+                }
+            }
+        }
+
+        function clearLines() {
+            board = board.filter(row => row.some(cell => cell === 0));
+            while (board.length < ROWS) {
+                board.unshift(Array(COLUMNS).fill(0));
+            }
+        }
+
+        function spawnNewBlock() {
+            currentBlock = getRandomShape();
+            position = { x: 4, y: 0 };
+        }
+
+        function resetGame() {
+            board = Array.from({ length: ROWS }, () => Array(COLUMNS).fill(0));
+            spawnNewBlock();
+        }
+
+        function gameLoop() {
+            moveDown();
+            drawBoard();
+            setTimeout(gameLoop, 500);
+        }
+
+        gameLoop();
+    </script>
+</body>
+</html>
